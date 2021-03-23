@@ -2,7 +2,7 @@
 
 [![arduino-library-badge](https://www.ardu-badge.com/badge/Plotter.svg?)](https://www.ardu-badge.com/Plotter)
 
-**Plotter** is an Arduino library for easy graphing on host computer via serial communication
+**Plotter** is an ESP-IDF library for easy graphing on host computer via serial communication (Modified from devinaconley's arduino plotter)
 
 ---
 
