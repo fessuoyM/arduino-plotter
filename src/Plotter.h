@@ -1,18 +1,22 @@
 /*
+
+  Note: This library was modified to be compatible with the ESP-IDF. Now, you can implement 
+  this code and use the platform.io "serial plotter" function to plot data directly into
+  your editor. 
   ===========================================================================================
   Plotter is an Arduino library that allows easy multi-variable and multi-graph plotting. The
-  library supports plots against time as well as 2-variable "X vs Y" graphing. 
+  library supports plots against time as well as 2-variable "X vs Y" graphing.
   -------------------------------------------------------------------------------------------
-  The library stores and handles all relevant graph information and variable references, 
+  The library stores and handles all relevant graph information and variable references,
   and transfers information via the serial port to a listener program written with the
   software provided by Processing. No modification is needed to this program; graph placement,
-  axis-scaling, etc. are handled automatically. 
-  Multiple options for this listener are available including stand-alone applications as well 
+  axis-scaling, etc. are handled automatically.
+  Multiple options for this listener are available including stand-alone applications as well
   as the source Processing script.
 
-  The library, these listeners, a quick-start guide, documentation, and usage examples are 
+  The library, these listeners, a quick-start guide, documentation, and usage examples are
   available at:
-  
+
   https://github.com/devinaconley/arduino-plotter
 
   -------------------------------------------------------------------------------------------
@@ -25,8 +29,7 @@
 
 #ifndef PLOTTER_H
 #define PLOTTER_H
-
-#include "Arduino.h"
+#include "esp_timer.h"
 
 class Plotter
 {
@@ -36,16 +39,16 @@ public:
 
     // Initialize Plotter
     void Begin();
-    
-    /* 
+
+    /*
        Add a 1-variable graph vs. time
-     
+
        Args:
        - title: const char * with title of graph
        - pointsDisplayed: number of points to be shown at a given time. Used to control time-scaling
        - labelA: const char * with label of the plotted variable
        - refA: reference to global variable that will be updated throughout program
-     
+
        Similar methods for multi-variable graphing vs. time are declared below and follow the same format
     */
     template <typename A>
@@ -56,10 +59,10 @@ public:
 	wrappers[0] = VariableWrapper( labelA, static_cast<void *>( &refA ), &Dereference<A>, "green" );
 	AddGraphHelper( title, wrappers, 1, false, pointsDisplayed );
     }
-  
+
     /*
-      Add an X vs. Y graph 
-    
+      Add an X vs. Y graph
+
       Args:
       - title: const char * with title of graph
       - pointsDisplayed: number of points to be shown at a given time. Determines duration of data persistance
@@ -77,17 +80,17 @@ public:
 	wrappers[1] = VariableWrapper( labelY, static_cast<void *>( &refY ), &Dereference<Y>, "green" );
 	AddGraphHelper( title, wrappers, 2, true, pointsDisplayed );
     }
-  
-    /* 
+
+    /*
        Plot data
-     
-       Function to be called in order to send current values of all global variables to listener application. This 
+
+       Function to be called in order to send current values of all global variables to listener application. This
        function will update all plots that have been added.
 
-       It is recommended to call plot() at the end of your loop function. 
+       It is recommended to call plot() at the end of your loop function.
     */
     void Plot();
-  
+
     /*
       Remove Graph
 
@@ -108,7 +111,7 @@ public:
       - true, if successful
     */
     bool SetColor( int index, const char * colorA );
-  
+
     // Add a 2-variable graph vs. time
     template <typename A, typename B>
 	void AddTimeGraph( const char * title, int pointsDisplayed,
@@ -131,7 +134,7 @@ public:
 	wrappers[2] = VariableWrapper( labelC, static_cast<void *>( &refC ), &Dereference<C>, "cyan" );
 	AddGraphHelper( title, wrappers, 3, false, pointsDisplayed );
     }
-  
+
     // Add a 4-variable graph vs. time
     template <typename A, typename B, typename C, typename D>
 	void AddTimeGraph( const char * title, int pointsDisplayed,
@@ -162,7 +165,7 @@ public:
     }
 
     // Add a 6-variable graph vs. time
-    template <typename A, typename B, typename C, typename D, typename E, typename F>    
+    template <typename A, typename B, typename C, typename D, typename E, typename F>
 	void AddTimeGraph( const char * title, int pointsDisplayed,
 			   const char * labelA, A & refA, const char * labelB, B & refB, const char * labelC, C & refC,
 			   const char * labelD, D & refD, const char * labelE, E & refE, const char * labelF, F & refF )
@@ -178,7 +181,7 @@ public:
     }
 
     // Set Colors for multivariable graphs
-    bool SetColor( int index, const char * colorA, const char * colorB );    
+    bool SetColor( int index, const char * colorA, const char * colorB );
     bool SetColor( int index, const char * colorA, const char * colorB, const char * colorC );
     bool SetColor( int index, const char * colorA, const char * colorB, const char * colorC,
 		   const char * colorD );
@@ -186,19 +189,19 @@ public:
 		   const char * colorD, const char * colorE );
     bool SetColor( int index, const char * colorA, const char * colorB, const char * colorC,
 		   const char * colorD, const char * colorE, const char * colorF );
-    
+
     // Destructor for Plotter class
     ~Plotter();
 
 public:
-    
+
     // Nested VariableWrapper class
     class VariableWrapper
     {
     public:
         VariableWrapper();
         VariableWrapper( const char * label, void * ref, double ( * deref )( void * ), const char * color );
-	
+
 	const char * GetLabel();
 	double GetValue();
 	const char * GetColor();
@@ -210,10 +213,10 @@ public:
 	const char * color;
 	void * ref;
 	double ( * deref )( void * );
-	
+
     }; //-- VariableWrapper
 
-    
+
 public:
     // Nested Graph node class
     class Graph
@@ -223,38 +226,38 @@ public:
 	~Graph();
 	void Plot( bool config );
 	bool SetColor( int sz, const char * * colors );
-	
+
 	// Data
 	Graph * next;
-	
+
     private:
 	bool xvy;
 	int size;
 	int pointsDisplayed;
 	const char * title;
 	VariableWrapper * wrappers;
-    
+
     }; //-- Graph
-    
+
 private:
     // Helpers
     void AddGraphHelper( const char * title, VariableWrapper * wrappers, int sz, bool xvy, int pointsDisplayed );
     bool SetColorHelper( int index, int sz, const char * * colors );
-    
+
     template <typename T>
 	static double Dereference( void * ref )
     {
 	return static_cast<double>( ( * static_cast<T *>( ref ) ) );
     }
-  
-  
+
+
     // Data
     int numGraphs;
     unsigned long lastUpdated;
     int counter;
     Graph * head;
     Graph * tail;
-  
+
 }; //-- Plotter
 
 // Constants
