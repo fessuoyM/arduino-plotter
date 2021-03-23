@@ -1,18 +1,22 @@
 /*
+
+  Note: This library was modified to be compatible with the ESP-IDF. Now, you can implement 
+  this code and use the platform.io "serial plotter" function to plot data directly into
+  your editor. 
   ===========================================================================================
   Plotter is an Arduino library that allows easy multi-variable and multi-graph plotting. The
-  library supports plots against time as well as 2-variable "X vs Y" graphing. 
+  library supports plots against time as well as 2-variable "X vs Y" graphing.
   -------------------------------------------------------------------------------------------
-  The library stores and handles all relevant graph information and variable references, 
+  The library stores and handles all relevant graph information and variable references,
   and transfers information via the serial port to a listener program written with the
   software provided by Processing. No modification is needed to this program; graph placement,
-  axis-scaling, etc. are handled automatically. 
-  Multiple options for this listener are available including stand-alone applications as well 
+  axis-scaling, etc. are handled automatically.
+  Multiple options for this listener are available including stand-alone applications as well
   as the source Processing script.
 
-  The library, these listeners, a quick-start guide, documentation, and usage examples are 
+  The library, these listeners, a quick-start guide, documentation, and usage examples are
   available at:
-  
+
   https://github.com/devinaconley/arduino-plotter
 
   -------------------------------------------------------------------------------------------
@@ -33,17 +37,16 @@ Plotter::Plotter()
     tail = NULL;
     numGraphs = 0;
     counter = 0;
-    lastUpdated = millis();
+    lastUpdated = esp_timer_get_time()/1000;
 }
 
 void Plotter::Begin()
 {
-    Serial.begin( 115200 );
-    lastUpdated = millis();
+    lastUpdated = esp_timer_get_time()/1000;
 }
 
 Plotter::~Plotter()
-{ 
+{
     Graph * temp = head;
     Graph * tempNext;
     while ( temp->next )
@@ -56,7 +59,7 @@ Plotter::~Plotter()
 }
 
 void Plotter::AddGraphHelper( const char * title, VariableWrapper * wrappers, int sz, bool xvy, int pointsDisplayed )
-{ 
+{
     Graph * temp = new Graph( title, wrappers, sz, xvy, pointsDisplayed );
     if ( head )
     {
@@ -68,9 +71,9 @@ void Plotter::AddGraphHelper( const char * title, VariableWrapper * wrappers, in
 	head = temp;
 	tail = temp;
     }
-  
-    numGraphs++;  
-    lastUpdated = millis();
+
+    numGraphs++;
+    lastUpdated = esp_timer_get_time()/1000;
 }
 
 bool Plotter::Remove( int index )
@@ -99,7 +102,7 @@ bool Plotter::Remove( int index )
 	    numGraphs--;
 	    delete temp;
 	}
-	lastUpdated = millis();
+	lastUpdated = esp_timer_get_time()/1000;
 	return true;
     }
 }
@@ -157,7 +160,7 @@ bool Plotter::SetColorHelper( int index, int sz, const char * * colors )
     bool res = temp->SetColor( sz, colors );
     if ( res )
     {
-	lastUpdated = millis();
+	lastUpdated = esp_timer_get_time()/1000;
     }
     return res;
 }
@@ -166,15 +169,15 @@ void Plotter::Plot()
 {
     bool config = counter == 0;
 
-    Serial.print( "{\"" ); Serial.print( TIME_KEY ); Serial.print( "\":" ); Serial.print( millis() );
-    
+    printf( "{\"" ); printf( TIME_KEY ); printf( "\":" ); printf( "%i", (int)esp_timer_get_time()/1000 );
+
     if ( config )
     {
-	Serial.print( ",\"" ); Serial.print( NUM_GRAPH_KEY ); Serial.print( "\":" ); Serial.print( numGraphs );
-	Serial.print( ",\"" ); Serial.print( LAST_UPDATED_KEY ); Serial.print( "\":" ); Serial.print( lastUpdated );
+	printf( ",\"" ); printf( NUM_GRAPH_KEY ); printf( "\":" ); printf( "%i", numGraphs );
+	printf( ",\"" ); printf( LAST_UPDATED_KEY ); printf( "\":" ); printf( "%i", (int)lastUpdated );
     }
-    
-    Serial.print( ",\"" ); Serial.print( GRAPHS_KEY ); Serial.print( "\":[" );
+
+    printf( ",\"" ); printf( GRAPHS_KEY ); printf( "\":[" );
 
     Graph * temp = head;
     while ( temp )
@@ -183,10 +186,10 @@ void Plotter::Plot()
 	temp = temp->next;
 	if ( temp )
 	{
-	    Serial.print( "," );
+	    printf( "," );
 	}
     }
-    Serial.print( "]}" ); Serial.println( OUTER_KEY );
+    printf( "]}" ); printf("%s\n",  OUTER_KEY );
 
     counter++;
     if ( counter >= CONFIG_INTERVAL )
@@ -213,46 +216,46 @@ Plotter::Graph::~Graph()
 
 void Plotter::Graph::Plot( bool config )
 {
-    Serial.print( "{" );
+    printf( "{" );
 
     if ( config )
     {
-	Serial.print( "\"" ); Serial.print( TITLE_KEY ); Serial.print( "\":" ); Serial.print( "\"" ); Serial.print( title ); Serial.print( "\"" );
-	Serial.print( ",\"" ); Serial.print( XVY_KEY ); Serial.print( "\":" ); Serial.print( xvy );
-	Serial.print( ",\"" ); Serial.print( POINTS_DISPLAYED_KEY ); Serial.print( "\":" ); Serial.print( pointsDisplayed );
-	Serial.print( ",\"" ); Serial.print( SIZE_KEY ); Serial.print( "\":" ); Serial.print( size );
-	Serial.print( ",\"" ); Serial.print( LABELS_KEY ); Serial.print( "\":[" );
+	printf( "\"" ); printf( TITLE_KEY ); printf( "\":" ); printf( "\"" ); printf( title ); printf( "\"" );
+	printf( ",\"" ); printf( XVY_KEY ); printf( "\":" ); printf( "%i", xvy );
+	printf( ",\"" ); printf( POINTS_DISPLAYED_KEY ); printf( "\":" ); printf( "%i", pointsDisplayed );
+	printf( ",\"" ); printf( SIZE_KEY ); printf( "\":" ); printf( "%i", size );
+	printf( ",\"" ); printf( LABELS_KEY ); printf( "\":[" );
 	for ( int i = 0; i < size; i++ )
 	{
-	    Serial.print( "\"" ); Serial.print( wrappers[i].GetLabel() ); Serial.print( "\"" );
+	    printf( "\"" ); printf( wrappers[i].GetLabel() ); printf( "\"" );
 	    if ( i + 1 < size )
 	    {
-		Serial.print( "," );
+		printf( "," );
 	    }
 	}
-	Serial.print( "],\"" ); Serial.print( COLORS_KEY ); Serial.print( "\":[" );
+	printf( "],\"" ); printf( COLORS_KEY ); printf( "\":[" );
 	for ( int i = 0; i < size; i++ )
 	{
-	    Serial.print( "\"" ); Serial.print( wrappers[i].GetColor() ); Serial.print( "\"" );
+	    printf( "\"" ); printf( wrappers[i].GetColor() ); printf( "\"" );
 	    if ( i + 1 < size )
 	    {
-		Serial.print( "," );
+		printf( "," );
 	    }
 	}
-	Serial.print( "]," );
+	printf( "]," );
     }
-    
-    Serial.print( "\"" ); Serial.print( DATA_KEY ); Serial.print( "\":[" );
+
+    printf( "\"" ); printf( DATA_KEY ); printf( "\":[" );
     for ( int i = 0; i < size; i++ )
     {
-	Serial.print( wrappers[i].GetValue(), 8 );
+	printf( "%.8f", wrappers[i].GetValue() );
 	if ( i + 1 < size )
 	{
-	    Serial.print( "," );
+	    printf( "," );
 	}
     }
-    
-    Serial.print( "]}" );
+
+    printf( "]}" );
 }
 
 bool Plotter::Graph::SetColor( int sz, const char * * colors )
